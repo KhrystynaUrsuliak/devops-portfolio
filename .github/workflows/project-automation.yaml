@@ -1,1 +1,84 @@
+name: Automation
 
+on:
+  pull_request:
+    types: [opened]
+  issues:
+    types: [closed]
+
+jobs:
+  update-project:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate GitHub CLI with PAT
+        run: echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
+      - name: Add PR and move to Review
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        run: |
+          PROJECT_ID="PVT_kwHOCXv9ec4BDT_9"
+          STATUS_FIELD_ID="PVTSSF_lAHOCXv9ec4BDT_9zg1RKBc"
+
+          ITEM_ID=$(gh api graphql -f query='
+          mutation($projectId: ID!, $contentId: ID!) {
+            addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+              item { id }
+            }
+          }' -F projectId="$PROJECT_ID" -F contentId="${{ github.event.pull_request.node_id }}" --jq ".data.addProjectV2ItemById.item.id")
+
+          if [ -z "$ITEM_ID" ]; then
+            exit 1
+          fi
+
+          gh api graphql -f query='
+          mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!) {
+            updateProjectV2ItemFieldValue(
+              input: {
+                projectId: $projectId,
+                itemId: $itemId,
+                fieldId: $fieldId,
+                value: { singleSelectOptionId: "98236657" }
+              }
+            ) {
+              projectV2Item { id }
+            }
+          }' -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$STATUS_FIELD_ID" -F optionId="$REVIEW_OPTION_ID"
+
+      - name: Move closed Issue to Done
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        run: |
+          PROJECT_ID="PVT_kwHOCXv9ec4BDT_9"
+          STATUS_FIELD_ID="PVTSSF_lAHOCXv9ec4BDT_9zg1RKBc"
+
+          ITEM_ID=$(gh api graphql -f query='
+          mutation($projectId: ID!, $contentId: ID!) {
+            addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+              item { id }
+            }
+          }' -F projectId="$PROJECT_ID" -F contentId="${{ github.event.issue.node_id }}" --jq ".data.addProjectV2ItemById.item.id")
+
+          if [ -z "$ITEM_ID" ]; then
+            exit 1
+          fi
+
+          gh api graphql -f query='
+          mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!) {
+            updateProjectV2ItemFieldValue(
+              input: {
+                projectId: $projectId,
+                itemId: $itemId,
+                fieldId: $fieldId,
+                value: { singleSelectOptionId: "51a48839" }
+              }
+            ) {
+              projectV2Item { id }
+            }
+          }' -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$STATUS_FIELD_ID"
