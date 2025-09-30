@@ -12,11 +12,10 @@ jobs:
 
       - name: Get IDs
         run: |
-          PROJECT_ID="PVT_kwHOCXv9ec4BDT_9"
           gh api graphql -f query='
-          query($project: ID!) {
-            node(id: $project) {
-              ... on ProjectV2 {
+          query {
+            viewer {
+              projectV2(number: 1) {
                 id
                 fields(first: 20) {
                   nodes {
@@ -24,13 +23,10 @@ jobs:
                     ... on ProjectV2SingleSelectField {
                       id
                       name
-                      options {
-                        id
-                        name
-                      }
+                      options { id name }
                     }
                   }
                 }
               }
             }
-          }' -F project=$PROJECT_ID
+          }'
