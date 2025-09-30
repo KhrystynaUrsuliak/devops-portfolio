@@ -1,10 +1,8 @@
-name: Automation
+name: Project Automation
 
 on:
   pull_request:
-    types: [opened]
-  issues:
-    types: [closed]
+    types: [opened, closed]
 
 jobs:
   update-project:
@@ -13,72 +11,102 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+      # projects: write не потрібен, бо використовується GH_PAT
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # Для доступу до репозиторію
 
-      - name: Authenticate GitHub CLI with PAT
+      - name: Authenticate GitHub CLI with Classic PAT
         run: echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
 
-      - name: Add PR and move to Review
-        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+      - name: Check auth status and project access
         run: |
-          PROJECT_ID="PVT_kwHOCXv9ec4BDT_9"
-          STATUS_FIELD_ID="PVTSSF_lAHOCXv9ec4BDT_9zg1RKBc"
+          gh auth status  # Перевіряємо scopes токена
+          echo "Authenticated as: $(gh api user --jq .login)"
+          # Перевірка версії gh CLI
+          gh --version
+          # Перевірка доступу до проєкту 4
+          gh api graphql -f query='
+            query {
+              viewer {
+                projectV2(number: 4) {
+                  id
+                  title
+                }
+              }
+            }' --jq '.data.viewer.projectV2 | {id: .id, title: .title}'
+          # Список проєктів для перевірки
+          gh project list --owner "@me" --limit 10
 
-          ITEM_ID=$(gh api graphql -f query='
-          mutation($projectId: ID!, $contentId: ID!) {
-            addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-              item { id }
-            }
-          }' -F projectId="$PROJECT_ID" -F contentId="${{ github.event.pull_request.node_id }}" --jq ".data.addProjectV2ItemById.item.id")
+      - name: Add PR to project if not exists & move to Review
+        if: github.event.action == 'opened'
+        run: |
+          # Add PR to project
+          ITEM_ID=$(gh project item-add 4 --owner "@me" --url ${{ github.event.pull_request.html_url }} --format json -q ".id")
+          echo "PR added with item ID $ITEM_ID"
 
           if [ -z "$ITEM_ID" ]; then
+            echo "Error: Failed to add PR to project"
             exit 1
           fi
 
-          gh api graphql -f query='
-          mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!) {
-            updateProjectV2ItemFieldValue(
-              input: {
-                projectId: $projectId,
-                itemId: $itemId,
-                fieldId: $fieldId,
-                value: { singleSelectOptionId: "98236657" }
+          # Move to Review
+          RESPONSE=$(gh api graphql -f query="
+            mutation {
+              updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: \"PVT_kwHOCYwIqs4BCszZ\"
+                  itemId: \"$ITEM_ID\"
+                  fieldId: \"PVTSSF_lAHOCYwIqs4BCszZzg01Zuk\"
+                  value: { singleSelectOptionId: \"9526636c\" }
+                }
+              ) {
+                projectV2Item { id }
               }
-            ) {
-              projectV2Item { id }
-            }
-          }' -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$STATUS_FIELD_ID" -F optionId="$REVIEW_OPTION_ID"
-
-      - name: Move closed Issue to Done
-        if: github.event_name == 'issues' && github.event.action == 'closed'
+            }" --jq '.data.updateProjectV2ItemFieldValue.projectV2Item.id')
+          echo "Updated item ID: $RESPONSE"
+          
+      - name: Move PR to Done if merged
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
         run: |
-          PROJECT_ID="PVT_kwHOCXv9ec4BDT_9"
-          STATUS_FIELD_ID="PVTSSF_lAHOCXv9ec4BDT_9zg1RKBc"
-
+          # Find the item ID for the PR in the project
           ITEM_ID=$(gh api graphql -f query='
-          mutation($projectId: ID!, $contentId: ID!) {
-            addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-              item { id }
-            }
-          }' -F projectId="$PROJECT_ID" -F contentId="${{ github.event.issue.node_id }}" --jq ".data.addProjectV2ItemById.item.id")
-
+            query {
+              node(id: "PVT_kwHOCYwIqs4BCszZ") {
+                ... on ProjectV2 {
+                  items(first: 100) {
+                    nodes {
+                      id
+                      content {
+                        ... on PullRequest {
+                          url
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' --jq '.data.node.items.nodes[] | select(.content.url == "${{ github.event.pull_request.html_url }}") | .id')
+          
           if [ -z "$ITEM_ID" ]; then
+            echo "Error: PR not found in project"
             exit 1
           fi
-
-          gh api graphql -f query='
-          mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!) {
-            updateProjectV2ItemFieldValue(
-              input: {
-                projectId: $projectId,
-                itemId: $itemId,
-                fieldId: $fieldId,
-                value: { singleSelectOptionId: "51a48839" }
+          echo "Found item ID: $ITEM_ID"
+  
+          # Move to Done
+          RESPONSE=$(gh api graphql -f query="
+            mutation {
+              updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: \"PVT_kwHOCYwIqs4BCszZ\"
+                  itemId: \"$ITEM_ID\"
+                  fieldId: \"PVTSSF_lAHOCYwIqs4BCszZzg01Zuk\"
+                  value: { singleSelectOptionId: \"98236657\" }
+                }
+              ) {
+                projectV2Item { id }
               }
-            ) {
-              projectV2Item { id }
-            }
-          }' -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$STATUS_FIELD_ID"
+            }" --jq '.data.updateProjectV2ItemFieldValue.projectV2Item.id')
+          echo "Moved to Done, updated item ID: $RESPONSE"
