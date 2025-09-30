@@ -1,32 +1,34 @@
 name: Fetch Project Info
-
 on:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   fetch-project-info:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_PAT }}   # <- no gh auth step needed
     steps:
-      - name: Authenticate GitHub CLI
-        run: echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
-
-      - name: Get IDs
+      - name: Fetch fields from ProjectV2
         run: |
-          gh api graphql -f query='
-          query {
-            viewer {
-              projectV2(number: 1) {
-                id
-                fields(first: 20) {
-                  nodes {
-                    __typename
-                    ... on ProjectV2SingleSelectField {
-                      id
-                      name
-                      options { id name }
+          PROJECT_ID="PVT_kwHOCXv9ec4BDT_9"
+          gh api graphql --field project="$PROJECT_ID" -f query='
+            query($project: ID!) {
+              node(id: $project) {
+                ... on ProjectV2 {
+                  id
+                  fields(first: 20) {
+                    nodes {
+                      __typename
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options { id name }
+                      }
                     }
                   }
                 }
               }
-            }
-          }'
+            }'
