@@ -1,0 +1,66 @@
+name: Project Automation
+
+on:
+  pull_request:
+    types: [opened]
+  issues:
+    types: [closed]
+
+jobs:
+  update_project_status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up GraphQL Action
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const projectId = "PVT_kwHOCLQ5Ns4BDUBz";
+            const statusFieldId = "PVTSSF_lAHOCLQ5Ns4BDUBzzg1RLUA";
+            const reviewStatusId = "cb624793";
+            const doneStatusId = "98236657";
+
+            const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
+            const type = context.eventName;
+
+            const getLinkedProjectItemId = async () => {
+              const { data: timeline } = await github.rest.issues.listEventsForTimeline({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber
+              });
+
+              const projectItem = timeline.find(event => event.project_card && event.project_card.project_url.includes(projectId));
+              return projectItem?.project_card?.node_id;
+            };
+
+            const itemId = await getLinkedProjectItemId();
+
+            if (!itemId) {
+              console.log("Project item not found for this issue/PR.");
+              return;
+            }
+
+            const statusId = type === "issues" ? doneStatusId : reviewStatusId;
+
+            const mutation = `
+              mutation {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: "${projectId}",
+                    itemId: "${itemId}",
+                    fieldId: "${statusFieldId}",
+                    value: {
+                      singleSelectOptionId: "${statusId}"
+                    }
+                  }
+                ) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `;
+
+            await github.graphql(mutation);
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
