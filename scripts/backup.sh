@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# SOURCE_DIR="${1:-}" 
-# BACKUP_DIR="${2:-}"
+SOURCE_DIR="${1:-}" 
+BACKUP_DIR="${2:-}"
 
-SOURCE_DIR="/c/Users/User/Documents/university-labs/devops/devops-portfolio/source"
-BACKUP_DIR="/c/Users/User/Documents/university-labs/devops/devops-portfolio/backup"
+# SOURCE_DIR="/c/Users/User/Documents/university-labs/devops/devops-portfolio/source"
+# BACKUP_DIR="/c/Users/User/Documents/university-labs/devops/devops-portfolio/backup"
 
 RETAIN=5
 LOG_FILE="backup.log"
@@ -18,10 +18,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# if [[ -z "${SOURCE_DIR}" || -z "${BACKUP_DIR}" ]]; then
-#   echo "Usage: $0 <source_dir> <backup_dir> [--retain N] [--log file]" >&2
-#   exit 2
-# fi
+if [[ -z "${SOURCE_DIR}" || -z "${BACKUP_DIR}" ]]; then
+  echo "Usage: $0 <source_dir> <backup_dir> [--retain N] [--log file]" >&2
+  exit 2
+fi
 
 mkdir -p "${BACKUP_DIR}"
 LOG_FILE="${BACKUP_DIR%/}/${LOG_FILE}"
