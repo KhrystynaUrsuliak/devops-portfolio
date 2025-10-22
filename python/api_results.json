@@ -1,0 +1,50 @@
+[
+  {
+    "url": "https://example.com",
+    "status": 200,
+    "ok": true,
+    "elapsed_ms": 1178,
+    "error": "",
+    "timestamp": 1761124661
+  },
+  {
+    "url": "https://api.github.com",
+    "status": 200,
+    "ok": true,
+    "elapsed_ms": 703,
+    "error": "",
+    "timestamp": 1761124662
+  },
+  {
+    "url": "https://pokeapi.co/api/v2/pokemon/ditto",
+    "status": 200,
+    "ok": true,
+    "elapsed_ms": 663,
+    "error": "",
+    "timestamp": 1761124663
+  },
+  {
+    "url": "https://jsonplaceholder.typicode.com/posts/1",
+    "status": 200,
+    "ok": true,
+    "elapsed_ms": 661,
+    "error": "",
+    "timestamp": 1761124663
+  },
+  {
+    "url": "https://httpbin.org/delay/3",
+    "status": 200,
+    "ok": true,
+    "elapsed_ms": 6547,
+    "error": "",
+    "timestamp": 1761124670
+  },
+  {
+    "url": "https://httpbin.org/status/500",
+    "status": 500,
+    "ok": false,
+    "elapsed_ms": 1249,
+    "error": "",
+    "timestamp": 1761124674
+  }
+]

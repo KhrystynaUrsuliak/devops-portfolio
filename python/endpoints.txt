@@ -1,0 +1,6 @@
+https://example.com
+https://api.github.com
+https://pokeapi.co/api/v2/pokemon/ditto
+https://jsonplaceholder.typicode.com/posts/1
+https://httpbin.org/delay/3
+https://httpbin.org/status/500

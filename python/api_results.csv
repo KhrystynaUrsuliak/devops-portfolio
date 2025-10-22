@@ -1,0 +1,7 @@
+url,status,ok,elapsed_ms,error,timestamp
+https://example.com,200,True,1178,,1761124661
+https://api.github.com,200,True,703,,1761124662
+https://pokeapi.co/api/v2/pokemon/ditto,200,True,663,,1761124663
+https://jsonplaceholder.typicode.com/posts/1,200,True,661,,1761124663
+https://httpbin.org/delay/3,200,True,6547,,1761124670
+https://httpbin.org/status/500,500,False,1249,,1761124674
